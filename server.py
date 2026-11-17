@@ -233,7 +233,8 @@ class Handler(BaseHTTPRequestHandler):
             label, days, maximum = data.get('label'), data.get('days'), data.get('max_devices')
             if not isinstance(label, str) or not 1 <= len(label.strip()) <= 100 or type(days) is not int or not 1 <= days <= 3650 or type(maximum) is not int or not 1 <= maximum <= 100:
                 return self.send(400, {'error': 'Thông tin key không hợp lệ'})
-            key = 'HZ-' + secrets.token_urlsafe(24)
+            # The HE Android client uppercases a key before sending it.
+            key = 'HZ-' + secrets.token_hex(24).upper()
             lid = secrets.token_hex(12)
             expires = int(now) + days * 86400
             with connect() as db:
