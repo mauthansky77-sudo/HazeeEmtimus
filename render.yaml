@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: hazee-key-trial
+    runtime: python
+    plan: free
+    buildCommand: python -m py_compile server.py
+    startCommand: python server.py
+    healthCheckPath: /health
+    envVars:
+      - key: ADMIN_TOKEN
+        generateValue: true
+      - key: DB_PATH
+        value: /tmp/hazee/hazee.sqlite3
