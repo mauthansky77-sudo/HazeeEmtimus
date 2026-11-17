@@ -3,7 +3,7 @@ services:
     name: hazee-key-trial
     runtime: python
     plan: free
-    buildCommand: python -m py_compile server.py
+    buildCommand: pip install -r requirements.txt
     startCommand: python server.py
     healthCheckPath: /health
     envVars:

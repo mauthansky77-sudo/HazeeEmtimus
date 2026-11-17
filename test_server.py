@@ -13,6 +13,7 @@ import server
 class APITest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        server.ADMIN_TOKEN = secrets.token_urlsafe(32)
         cls.tmp = tempfile.TemporaryDirectory()
         server.DB_PATH = os.path.join(cls.tmp.name, 'test.sqlite3')
         server.initialize()
