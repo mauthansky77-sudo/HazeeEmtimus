@@ -8,6 +8,7 @@ import sys
 import tempfile
 import unittest
 import threading
+import urllib.error
 import urllib.request
 import urllib.parse
 
@@ -82,6 +83,22 @@ class HECompatibilityTest(unittest.TestCase):
             request = urllib.request.Request(root + '/api/v1/licenses/verify', data=json.dumps(self.data).encode(), headers={'Content-Type': 'application/json'})
             with urllib.request.urlopen(request) as response:
                 self.decode(json.load(response), 'NTJR-LICENSE-V1.')
+            asset_request = urllib.request.Request(
+                root + '/api/v1/android/menu/assets/' + manifest['asset_sha256'] + '.bin',
+                data=json.dumps(self.data).encode(),
+                headers={'Content-Type': 'application/json'},
+            )
+            with urllib.request.urlopen(asset_request) as response:
+                self.assertEqual(hashlib.sha256(response.read()).hexdigest(), manifest['asset_sha256'])
+            invalid_data = dict(self.data, key='HZ-invalid')
+            invalid_request = urllib.request.Request(
+                asset_request.full_url,
+                data=json.dumps(invalid_data).encode(),
+                headers={'Content-Type': 'application/json'},
+            )
+            with self.assertRaises(urllib.error.HTTPError) as rejected:
+                urllib.request.urlopen(invalid_request)
+            self.assertEqual(rejected.exception.code, 403)
         finally:
             http.shutdown()
             http.server_close()

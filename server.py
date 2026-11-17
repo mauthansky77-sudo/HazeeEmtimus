@@ -127,6 +127,15 @@ class Handler(BaseHTTPRequestHandler):
         secure = '; Secure' if os.environ.get('RENDER') or self.headers.get('X-Forwarded-Proto') == 'https' else ''
         return f'hazee_session={token}; HttpOnly; SameSite=Strict; Path=/; Max-Age={age}{secure}'
 
+    def send_asset(self):
+        data = HE.blob_path.read_bytes()
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/octet-stream')
+        self.send_header('Content-Length', str(len(data)))
+        self.send_header('X-Content-Type-Options', 'nosniff')
+        self.end_headers()
+        self.wfile.write(data)
+
     def do_GET(self):
         route = urlsplit(self.path)
         if route.path == '/api/v1/android/menu/manifest':
@@ -141,14 +150,7 @@ class Handler(BaseHTTPRequestHandler):
         if route.path.startswith('/api/v1/android/menu/assets/'):
             if HE is None or route.path != '/api/v1/android/menu/assets/' + HE.release['asset_sha256'] + '.bin':
                 return self.send(404, {'error': 'not_found'})
-            data = HE.blob_path.read_bytes()
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/octet-stream')
-            self.send_header('Content-Length', str(len(data)))
-            self.send_header('X-Content-Type-Options', 'nosniff')
-            self.end_headers()
-            self.wfile.write(data)
-            return
+            return self.send_asset()
         if self.path == '/health':
             return self.send(200, {'status': 'ok', 'app': 'hazee-key-trial'})
         if self.path == '/':
@@ -204,6 +206,15 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send(error.status, {'ok': False, 'code': error.code})
             status, result = verify_license(data.get('key'), data.get('device_id'))
             return self.send(status, result)
+        if self.path.startswith('/api/v1/android/menu/assets/'):
+            if HE is None or self.path != '/api/v1/android/menu/assets/' + HE.release['asset_sha256'] + '.bin':
+                return self.send(404, {'error': 'not_found'})
+            from he_compat import HEError
+            try:
+                HE.authorize(data)
+            except HEError as error:
+                return self.send(error.status, {'ok': False, 'code': error.code})
+            return self.send_asset()
         if self.path.startswith('/api/v2/licenses/key-vault/'):
             if HE is None:
                 return self.send(503, {'ok': False, 'code': 'he_not_configured'})
